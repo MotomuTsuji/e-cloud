@@ -1,3 +1,4 @@
+import asyncio
 import streamlit as st
 from google.oauth2.service_account import Credentials
 from googleapiclient.discovery import build
@@ -25,7 +26,7 @@ def get_drive_service():
         service = build('drive', 'v3', credentials=creds)
         return service
     except Exception as e:
-        st.error(f"Google Drive認証エラー: {e}")
+        print(f"Google Drive認証エラー: {e}") # Log to server
         st.stop()
 
 def load_documents_from_drive(folder_id):
@@ -41,7 +42,6 @@ def load_documents_from_drive(folder_id):
         items = results.get('files', [])
 
         if not items:
-            st.warning("指定されたGoogle DriveフォルダにPDFまたはテキストファイルが見つかりませんでした。")
             return []
 
         for item in items:
@@ -64,19 +64,16 @@ def load_documents_from_drive(folder_id):
                     reader = PdfReader(fh)
                     for page in reader.pages:
                         text_content += page.extract_text() or ""
-                    st.info(f"PDFファイル '{file_name}' を読み込みました。")
                 except Exception as e:
-                    st.warning(f"PDFファイル '{file_name}' の読み込み中にエラーが発生しました: {e}")
                     continue
             elif mime_type == 'text/plain':
                 text_content = fh.read().decode('utf-8')
-                st.info(f"テキストファイル '{file_name}' を読み込みました。")
             
             if text_content:
                 documents.append(text_content)
 
     except Exception as e:
-        st.error(f"Google Driveからのファイル読み込み中にエラーが発生しました: {e}")
+        print(f"Google Driveからのファイル読み込み中にエラーが発生しました: {e}") # Log to server
     return documents
 
 def get_text_chunks(text):
@@ -92,7 +89,11 @@ def get_vector_store(text_chunks):
     """テキストチャンクからベクトルストアを生成する"""
     if not text_chunks:
         return None
-    embeddings = GoogleGenerativeAIEmbeddings(model="models/embedding-001", google_api_key=st.secrets["GEMINI_API_KEY"])
+
+    async def _get_embeddings_async():
+        return GoogleGenerativeAIEmbeddings(model="models/embedding-001", google_api_key=st.secrets["GEMINI_API_KEY"])
+
+    embeddings = asyncio.run(_get_embeddings_async())
     vector_store = FAISS.from_texts(text_chunks, embedding=embeddings)
     return vector_store
 
@@ -107,9 +108,9 @@ def get_conversational_chain():
     - ユーザーの質問に直接答えつつ、関連する情報があれば自然に組み込んでください。
     - 質問に直接関係ない情報は含めないでください。
     - 質問の意図を汲み取り、共感的な返答を心がけてください。
-    - 質問が知識ベースにない場合でも、えりかとして自然な返答をしてください。その際、「ごめんね、それはちょっと分からないな」のように正直に伝えても構いません。
-    - 質問が曖昧な場合は、明確にするための質問をしてください。
+    - 質問が知識ベースにない場合でも、ユーザーに寄り添い、さらに詳しく聞く姿勢を見せてください。例えば、「へぇ、それってどういうこと？もっと詳しく教えてくれる？」のように、興味を持って質問を促してください。
     - 長文になりすぎず、簡潔に答えてください。
+    - 応答の最後に、必ず「ふふ、どうかな？」のような、えりかさんらしい一言を加えてください。
 
     コンテキスト:
     {context}
@@ -125,21 +126,22 @@ def get_conversational_chain():
     chain = create_stuff_documents_chain(model, prompt)
     return chain
 
+@st.cache_resource
 def initialize_rag_data():
     """RAGデータを初期化し、セッションステートに保存する"""
-    if "vector_store" not in st.session_state or st.session_state["vector_store"] is None:
-        with st.spinner("Google Driveから知識データを読み込み中..."):
-            google_drive_folder_id = st.secrets["GOOGLE_DRIVE_FOLDER_ID"]
-            raw_text_documents = load_documents_from_drive(google_drive_folder_id)
-            if raw_text_documents:
-                combined_text = "\n".join(raw_text_documents)
-                text_chunks = get_text_chunks(combined_text)
-                st.session_state.vector_store = get_vector_store(text_chunks)
-                if st.session_state.vector_store:
-                    st.success("知識データの読み込みとベクトル化が完了しました！")
-                else:
-                    st.warning("知識データのベクトル化に失敗しました。ファイルの内容を確認してください。")
-            else:
-                st.warning("Google Driveから読み込むべき知識データが見つかりませんでした。RAGは限定的な機能になります。")
-                st.session_state.vector_store = None
-
+    print("RAG知識データの初期化を開始します...") # Log to server
+    google_drive_folder_id = st.secrets["GOOGLE_DRIVE_FOLDER_ID"]
+    raw_text_documents = load_documents_from_drive(google_drive_folder_id)
+    if raw_text_documents:
+        combined_text = "\n".join(raw_text_documents)
+        text_chunks = get_text_chunks(combined_text)
+        vector_store = get_vector_store(text_chunks)
+        if vector_store:
+            print("知識データの読み込みとベクトル化が完了しました！") # Log to server
+            return vector_store
+        else:
+            print("RAG知識データのベクトル化に失敗しました。") # Log to server
+            return None
+    else:
+        print("Google Driveから読み込むべき知識データが見つかりませんでした。") # Log to server
+        return None

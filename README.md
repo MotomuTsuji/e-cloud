@@ -116,7 +116,7 @@
     git rm --cached .streamlit/secrets.toml # secrets.tomlが誤って追加されないようにする
     echo ".streamlit/secrets.toml" >> .gitignore # .gitignoreに追加
     git add .gitignore # .gitignoreもコミット対象に
-    git commit -m "Initial commit of AI Erika Chat application"
+    git commit -m "Initial commit of e-cloud application"
     git branch -M main
     git remote add origin <あなたのGitHubリポジトリのURL>
     git push -u origin main

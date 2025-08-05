@@ -3,8 +3,15 @@ from google_auth import check_login, logout, handle_callback, login
 from rag_processor import initialize_rag_data, get_conversational_chain
 import os
 
+# RAGデータの初期化 (アプリ起動時に一度だけ実行される)
+st.session_state.vector_store = initialize_rag_data()
+
+# ベクトルストアが利用可能か確認
+if st.session_state.vector_store is None:
+    st.warning("知識データがロードされていないため、RAG機能は利用できません。Google Driveの設定を確認してください。")
+
 # Streamlitページの基本設定
-st.set_page_config(page_title="AI Erika Chat", page_icon="🌸", layout="centered")
+st.set_page_config(page_title="e-cloud", page_icon="🌸", layout="centered")
 
 # --- Custom CSS for theming --- #
 st.markdown("""
@@ -58,13 +65,13 @@ st.markdown("""
         word-wrap: break-word;
     }
     .stChatMessage.st-chat-message-user {
-        background-color: #FFDAB9; /* PeachPuff - user bubble */
+        background-color: #e0f2f7; /* User bubble */
         align-self: flex-end;
         margin-left: auto; /* Align to right */
         border-bottom-right-radius: 0;
     }
     .stChatMessage.st-chat-message-assistant {
-        background-color: #E0FFFF; /* LightCyan - AI bubble */
+        background-color: #fde3f0; /* AI bubble */
         align-self: flex-start;
         margin-right: auto; /* Align to left */
         border-bottom-left-radius: 0;
@@ -75,6 +82,7 @@ st.markdown("""
         border-radius: 20px;
         border: 1px solid #FFB6C1; /* Light Pink */
         padding: 10px 15px;
+        background-color: #ffebee; /* Light pink for input form background */
     }
     .stButton > button {
         background-color: #FF69B4; /* Hot Pink */
@@ -119,6 +127,17 @@ st.markdown("""
         color: #333333 !important; /* Dark grey for warning text */
     }
 
+    /* Specific Streamlit element color override */
+    .st-bz {
+        color: #333333 !important; /* Change color to dark grey */
+    }
+    .st-emotion-cache-9ajs8n {
+        color: #b01030 !important; /* Change color to #b01030 */
+    }
+    .st-emotion-cache-hzygls {
+        background-color: #f8bbd0 !important; /* Change background color to #f8bbd0 */
+    }
+
     /* Login Box Styling */
     .login-box {
         background-color: white;
@@ -146,7 +165,7 @@ if "logged_in" not in st.session_state:
 # コールバック処理を先に実行
 handle_callback()
 
-if not check_login():
+if not st.session_state.logged_in:
     # ログインしていない場合のUI
     st.markdown("<h1 style='text-align: center; color: #8B008B;'>e-cloud</h1>", unsafe_allow_html=True)
 
@@ -160,7 +179,7 @@ if not check_login():
     <div class='login-box'>
         <h1 style='text-align: center; color: #333333;'>ログイン</h1>
         <div style='text-align: center; margin-top: 20px;'>
-            <a href='{login_url}' style='
+            <a href='{login_url}' target="_self" style='
                 background-color: #CCCCCC; /* Gray background */
                 color: #333333; /* Dark text */
                 border-radius: 20px;
@@ -178,6 +197,8 @@ if not check_login():
     st.stop() # ログインしていない場合はここで処理を停止
 
 # ログイン済みの場合のUI
+
+
 # ヘッダー
 header_cols = st.columns([1, 4, 1])
 with header_cols[0]:
@@ -189,20 +210,9 @@ with header_cols[2]:
 
 # サイドバーにログアウトボタン
 with st.sidebar:
-    st.title("AI Erika Chat")
     st.write(f"ようこそ、{st.session_state.user_info['name']}さん！")
     if st.button("ログアウト"): # ログアウトボタンをサイドバーに配置
         logout()
-
-# --- RAGデータの初期化 --- #
-# ログイン後に一度だけ実行されるようにする
-if "vector_store_initialized" not in st.session_state:
-    initialize_rag_data()
-    st.session_state.vector_store_initialized = True
-
-# ベクトルストアが利用可能か確認
-if "vector_store" not in st.session_state or st.session_state.vector_store is None:
-    st.warning("知識データがロードされていないため、RAG機能は利用できません。Google Driveの設定を確認してください。")
 
 # --- チャットUI --- #
 # チャットウィンドウ（固定高さでスクロール可能）
@@ -228,18 +238,20 @@ if prompt := st.chat_input("えりかに話しかけてみよう..."):
                     docs = []
                     if st.session_state.vector_store:
                         docs = st.session_state.vector_store.similarity_search(prompt)
+                    if not docs:
+                        st.warning("関連する知識が見つかりませんでした。RAGは機能していません。") # Debugging
 
                     # 会話チェーンの取得
                     chain = get_conversational_chain()
 
                     # Gemini APIに問い合わせ
-                    assistant_response = chain.invoke({"input_documents": docs, "question": prompt})
-
+                    assistant_response = chain.invoke({"context": docs, "question": prompt})
                     st.markdown(assistant_response)
                     st.session_state.messages.append({"role": "assistant", "content": assistant_response})
                 except Exception as e:
-                    error_message = f"ごめんね、エラーが発生しちゃったみたい... ({e})" # 妻の口調を模倣
-                    st.error(error_message)
+                    st.error(f"ごめんね、エラーが発生しちゃったみたい...")
+                    st.exception(e) # これで詳細なエラー情報が表示されるはず
+                    error_message = f"エラー詳細: {type(e).__name__}: {e}" # より具体的なエラーメッセージ
                     st.session_state.messages.append({"role": "assistant", "content": error_message})
 
 # アプリケーション起動時に一時ファイルを削除 (google_auth.pyで作成される)

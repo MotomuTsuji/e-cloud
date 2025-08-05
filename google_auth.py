@@ -4,6 +4,7 @@ from google.oauth2 import credentials
 import os
 import json
 from googleapiclient.discovery import build
+from google.auth.transport.requests import Request
 
 # OAuth2設定
 CLIENT_SECRETS_FILE = "client_secrets.json" # 一時ファイルとして作成
@@ -69,10 +70,11 @@ def handle_callback():
             st.error("このメールアドレスではアクセスが許可されていません。")
             logout()
         else:
-            st.success(f"ようこそ、{user_info['name']}さん！")
-            # クエリパラメータをクリアしてURLをクリーンにする
-            st.query_params.clear()
-            st.rerun() # ログイン成功後にページをリロードしてチャットUIを表示
+            st.session_state["user_info"] = user_info # ユーザー情報をセッションステートに保存
+            st.session_state["logged_in"] = True
+            st.session_state["creds"] = creds
+            st.query_params.clear() # クエリパラメータをクリア
+            # st.rerun() は削除し、app.py側でUIを切り替える
 
 def logout():
     """ログアウト処理"""
@@ -93,6 +95,36 @@ def check_login():
     # コールバックURLからのリダイレクトを処理
     if "code" in st.query_params and not st.session_state.logged_in:
         handle_callback()
+
+    # 既存の認証情報を確認し、セッションを復元
+    if "creds" in st.session_state and st.session_state.creds:
+        creds = st.session_state.creds
+        if creds.expired and creds.refresh_token:
+            try:
+                creds.refresh(Request())
+                st.session_state["creds"] = creds # 更新されたクレデンシャルを保存
+                print("Google認証情報をリフレッシュしました。")
+            except Exception as e:
+                print(f"Google認証情報のリフレッシュに失敗しました: {e}")
+                logout()
+                return False
+        
+        if not creds.expired:
+            try:
+                # ユーザー情報を再取得してセッションを確立
+                oauth2_service = build('oauth2', 'v2', credentials=creds)
+                user_info = oauth2_service.userinfo().get().execute()
+                authorized_email = st.secrets["AUTHORIZED_USER_EMAIL"]
+                if user_info["email"] == authorized_email:
+                    st.session_state["user_info"] = user_info
+                    st.session_state["logged_in"] = True
+                    print("既存のGoogle認証情報でログイン状態を復元しました。")
+                else:
+                    st.error("このメールアドレスではアクセスが許可されていません。")
+                    logout()
+            except Exception as e:
+                print(f"既存のGoogle認証情報でのログイン状態復元に失敗しました: {e}")
+                logout()
 
     return st.session_state.logged_in
 
