@@ -1,0 +1,10 @@
+streamlit
+google-auth-oauthlib
+google-api-python-client
+google-auth-httplib2
+langchain
+langchain-community
+langchain-google-genai
+pypdf
+faiss-cpu
+python-dotenv # For local development, though Streamlit Secrets is preferred for deployment
