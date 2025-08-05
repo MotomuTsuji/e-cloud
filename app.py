@@ -83,6 +83,12 @@ st.markdown("""
         border: 1px solid #FFB6C1; /* Light Pink */
         padding: 10px 15px;
         background-color: #ffebee; /* Light pink for input form background */
+        color: #333333; /* Text color for input */
+    }
+    .stTextInput > div > div > input::placeholder,
+    .stTextInput > div > div > textarea::placeholder {
+        color: #333333 !important; /* Placeholder text color */
+        opacity: 1 !important; /* Ensure placeholder is not transparent */
     }
     .stButton > button {
         background-color: #FF69B4; /* Hot Pink */
@@ -138,6 +144,14 @@ st.markdown("""
         background-color: #f8bbd0 !important; /* Change background color to #f8bbd0 */
     }
 
+    /* Custom background colors for specific Streamlit elements */
+    .st-emotion-cache-x1bvup {
+        background-color: #ffebee !important;
+    }
+    .st-bf {
+        background-color: #ffebee !important;
+    }
+
     /* Login Box Styling */
     .login-box {
         background-color: white;
@@ -162,8 +176,8 @@ if "logged_in" not in st.session_state:
     st.session_state.logged_in = False
 
 # --- 認証フロー --- #
-# コールバック処理を先に実行
-handle_callback()
+# ログイン状態をチェックし、セッションを復元
+check_login()
 
 if not st.session_state.logged_in:
     # ログインしていない場合のUI
@@ -224,7 +238,7 @@ with chat_container:
 
 # ユーザー入力の処理
 # st.chat_inputは入力フォームと送信ボタンを兼ねる
-if prompt := st.chat_input("えりかに話しかけてみよう..."):
+if prompt := st.chat_input(""):
     st.session_state.messages.append({"role": "user", "content": prompt})
     with chat_container: # 新しいメッセージをチャットコンテナに表示
         with st.chat_message("user"):
