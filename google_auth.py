@@ -16,8 +16,8 @@ def get_redirect_uri():
     環境変数 `STREAMLIT_SERVER_ADDRESS` の有無で、
     Streamlit Cloud上かローカルかを判定します。
     """
-    # Streamlit Cloud上では `STREAMLIT_SERVER_ADDRESS` が設定される
-    if "STREAMLIT_SERVER_ADDRESS" in os.environ:
+    # Streamlit Cloud上では `HOSTNAME` が `streamlit` に設定される
+    if os.environ.get('HOSTNAME') == 'streamlit':
         return "https://e-cloud.streamlit.app/oauth_callback"
     else:
         # ローカル環境

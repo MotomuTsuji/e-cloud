@@ -3,10 +3,6 @@ import os
 from google_auth import check_login, logout, handle_callback, login
 from rag_processor import initialize_rag_data, get_conversational_chain
 
-# --- DEBUG: 環境変数を表示 ---
-st.expander("環境変数（デバッグ用）").write(os.environ)
-# --- END DEBUG ---
-
 # RAGデータの初期化 (アプリ起動時に一度だけ実行される)
 st.session_state.vector_store = initialize_rag_data()
 
@@ -194,7 +190,7 @@ if not st.session_state.logged_in:
         st.rerun() # 再度実行してauth_urlを取得
 
     # 環境に応じてログインボタンのHTMLを切り替える
-    is_streamlit_cloud = "STREAMLIT_SERVER_ADDRESS" in os.environ
+    is_streamlit_cloud = os.environ.get('HOSTNAME') == 'streamlit'
 
     if is_streamlit_cloud:
         # Streamlit CloudではJavaScriptでリダイレクト
@@ -281,7 +277,7 @@ if prompt := st.chat_input(""):
                     st.markdown(assistant_response)
                     st.session_state.messages.append({"role": "assistant", "content": assistant_response})
                 except Exception as e:
-                    st.error("ごめんね、エラーが発生しちゃったみたい...")
+                    st.error(f"ごめんね、エラーが発生しちゃったみたい...")
                     st.exception(e) # これで詳細なエラー情報が表示されるはず
                     error_message = f"エラー詳細: {type(e).__name__}: {e}" # より具体的なエラーメッセージ
                     st.session_state.messages.append({"role": "assistant", "content": error_message})
