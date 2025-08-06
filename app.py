@@ -193,7 +193,7 @@ if not st.session_state.logged_in:
     <div class='login-box'>
         <h1 style='text-align: center; color: #333333;'>ログイン</h1>
         <div style='text-align: center; margin-top: 20px;'>
-            <a href='{login_url}' target="_self" style='
+            <a href='{login_url}' target="_top" style='
                 background-color: #CCCCCC; /* Gray background */
                 color: #333333; /* Dark text */
                 border-radius: 20px;

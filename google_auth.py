@@ -30,7 +30,7 @@ def create_client_secrets_file():
 
     # Google Cloud Consoleに登録するリダイレクトURIとJS生成元
     # このリストは参考情報であり、実際の認証フローではget_redirect_uri()の値が使われます。
-    redirect_uris = ["http://localhost:8501", "https://e-cloud.streamlit.app"]
+    redirect_uris = ["http://localhost:8501/oauth_callback", "https://e-cloud.streamlit.app/oauth_callback"]
     javascript_origins = ["http://localhost:8501", "https://e-cloud.streamlit.app"]
 
     client_secrets_data = {
