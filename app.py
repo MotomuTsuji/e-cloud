@@ -195,17 +195,20 @@ if not st.session_state.logged_in:
         login() # auth_urlを生成
         st.rerun() # 再度実行してauth_urlを取得
 
-    # ログインボックスのタイトル
-    st.markdown("""
-    <div class='login-box'>
+    # ログインボックスとボタンを単一のHTMLブロックとして生成
+    login_box_html = f'''
+    <div class="login-box">
         <h1 style='text-align: center; color: #333333;'>ログイン</h1>
+        <div style='text-align: center; margin-top: 20px;'>
+            <a href="{login_url}" target="_blank" style="
+                background-color: #CCCCCC; color: #333333; border-radius: 20px; 
+                padding: 10px 20px; border: none; font-weight: bold; 
+                text-decoration: none; display: inline-block; 
+                box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);">Googleでログイン</a>
+        </div>
     </div>
-    """, unsafe_allow_html=True)
-
-    # st.link_buttonを中央に配置して表示
-    col1, col2, col3 = st.columns([1, 1, 1])
-    with col2:
-        st.link_button("Googleでログイン", login_url, use_container_width=True)
+    '''
+    st.markdown(login_box_html, unsafe_allow_html=True)
 
     st.stop() # ログインしていない場合はここで処理を停止
 
