@@ -1,4 +1,5 @@
 import streamlit as st
+import os
 
 # --- DEBUG: 環境変数を表示 ---
 st.expander("環境変数（デバッグ用）").write(os.environ)
@@ -6,7 +7,6 @@ st.expander("環境変数（デバッグ用）").write(os.environ)
 
 from google_auth import check_login, logout, handle_callback, login
 from rag_processor import initialize_rag_data, get_conversational_chain
-import os
 
 # RAGデータの初期化 (アプリ起動時に一度だけ実行される)
 st.session_state.vector_store = initialize_rag_data()
