@@ -25,6 +25,10 @@ def get_redirect_uri():
 
 def create_client_secrets_file():
     """Streamlit secretsからクライアントIDとシークレットを読み込み、一時ファイルを作成する"""
+    # 既存の一時ファイルを削除し、常に新しい設定で作成する
+    if os.path.exists(CLIENT_SECRETS_FILE):
+        os.remove(CLIENT_SECRETS_FILE)
+
     client_id = st.secrets["GOOGLE_CLIENT_ID"]
     client_secret = st.secrets["GOOGLE_CLIENT_SECRET"]
 
