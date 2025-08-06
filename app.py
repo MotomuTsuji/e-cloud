@@ -1,4 +1,9 @@
 import streamlit as st
+
+# --- DEBUG: 環境変数を表示 ---
+st.expander("環境変数（デバッグ用）").write(os.environ)
+# --- END DEBUG ---
+
 from google_auth import check_login, logout, handle_callback, login
 from rag_processor import initialize_rag_data, get_conversational_chain
 import os
