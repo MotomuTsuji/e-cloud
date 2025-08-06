@@ -20,7 +20,7 @@ if st.session_state.vector_store is None:
 st.set_page_config(page_title="e-cloud", page_icon="🌸", layout="centered")
 
 # --- Custom CSS for theming --- #
-st.markdown(r"""
+st.markdown(r'''
 <style>
     /* General body styling */
     body {
@@ -173,7 +173,7 @@ st.markdown(r"""
     }
 
 </style>
-", unsafe_allow_html=True)
+''', unsafe_allow_html=True)
 
 # セッションステートの初期化
 if "messages" not in st.session_state:
@@ -283,7 +283,7 @@ if prompt := st.chat_input(""):
                     st.markdown(assistant_response)
                     st.session_state.messages.append({"role": "assistant", "content": assistant_response})
                 except Exception as e:
-                    st.error("ごめんね、エラーが発生しちゃったみたい...")
+                    st.error(f"ごめんね、エラーが発生しちゃったみたい...")
                     st.exception(e) # これで詳細なエラー情報が表示されるはず
                     error_message = f"エラー詳細: {type(e).__name__}: {e}" # より具体的なエラーメッセージ
                     st.session_state.messages.append({"role": "assistant", "content": error_message})
