@@ -13,15 +13,15 @@ SCOPES = ["https://www.googleapis.com/auth/userinfo.email", "https://www.googlea
 def get_redirect_uri():
     """
     環境に応じてリダイレクトURIを返します。
-    st.secretsに "GOOGLE_CLIENT_ID" が存在するかどうかで、
-    Streamlit Cloud上（またはsecretsが設定された環境）かどうかを判定します。
+    環境変数 `STREAMLIT_SERVER_ADDRESS` の有無で、
+    Streamlit Cloud上かローカルかを判定します。
     """
-    # Streamlit Cloud上では、st.secretsに設定されたクライアントIDが存在するはず
-    if "GOOGLE_CLIENT_ID" in st.secrets:
-        return "https://e-cloud.streamlit.app"
+    # Streamlit Cloud上では `STREAMLIT_SERVER_ADDRESS` が設定される
+    if "STREAMLIT_SERVER_ADDRESS" in os.environ:
+        return "https://e-cloud.streamlit.app/oauth_callback"
     else:
-        # ローカル環境では、固定のURLを使用
-        return "http://localhost:8501"
+        # ローカル環境
+        return "http://localhost:8501/oauth_callback"
 
 def create_client_secrets_file():
     """Streamlit secretsからクライアントIDとシークレットを読み込み、一時ファイルを作成する"""
@@ -56,6 +56,14 @@ def get_flow():
     # 現在の環境に応じたリダイレクトURIを取得
     redirect_uri = get_redirect_uri()
 
+    # --- デバッグ情報 ---
+    print("--- OAuth Debug Info ---")
+    print(f"Redirect URI used: {redirect_uri}")
+    client_secrets_data = json.load(open(CLIENT_SECRETS_FILE))
+    print(f"Client ID from secrets file: {client_secrets_data['web']['client_id']}")
+    print("------------------------")
+    # --- デバッグ情報終わり ---
+
     flow = Flow.from_client_secrets_file(
         CLIENT_SECRETS_FILE,
         scopes=SCOPES,
@@ -71,7 +79,7 @@ def login():
 
 def handle_callback():
     """認証コールバックを処理し、ユーザー情報を取得する"""
-    if "code" in st.query_params:
+    try:
         code = st.query_params["code"]
         flow = get_flow()
         flow.fetch_token(code=code)
@@ -81,21 +89,25 @@ def handle_callback():
         oauth2_service = build('oauth2', 'v2', credentials=creds)
         user_info = oauth2_service.userinfo().get().execute()
 
-        st.session_state["user_info"] = user_info
-        st.session_state["logged_in"] = True
-        st.session_state["creds"] = creds
-
         # 許可されたメールアドレスかチェック
         authorized_email = st.secrets["AUTHORIZED_USER_EMAIL"]
         if user_info["email"] != authorized_email:
             st.error("このメールアドレスではアクセスが許可されていません。")
             logout()
-        else:
-            st.session_state["user_info"] = user_info # ユーザー情報をセッションステートに保存
-            st.session_state["logged_in"] = True
-            st.session_state["creds"] = creds
-            st.query_params.clear() # クエリパラメータをクリア
-            # st.rerun() は削除し、app.py側でUIを切り替える
+            return
+
+        st.session_state["user_info"] = user_info
+        st.session_state["logged_in"] = True
+        st.session_state["creds"] = creds
+
+        # 認証完了後、クエリパラメータを削除してトップページにリダイレクト
+        st.query_params.clear()
+        st.rerun()
+
+    except Exception as e:
+        st.error(f"認証中にエラーが発生しました: {e}")
+        print(f"Callback error: {e}")
+        logout()
 
 def logout():
     """ログアウト処理"""
