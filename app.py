@@ -18,7 +18,7 @@ if st.session_state.vector_store is None:
 st.set_page_config(page_title="e-cloud", page_icon="🌸", layout="centered")
 
 # --- Custom CSS for theming --- #
-st.markdown(f"""
+st.markdown(r"""
 <style>
     /* General body styling */
     body {
