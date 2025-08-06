@@ -83,7 +83,7 @@ st.markdown("""
         border: 1px solid #FFB6C1; /* Light Pink */
         padding: 10px 15px;
         background-color: #ffebee; /* Light pink for input form background */
-        color: #333333; /* Text color for input */
+        color: #333333 !important; /* Text color for input */
     }
     .stTextInput > div > div > input::placeholder,
     .stTextInput > div > div > textarea::placeholder {
@@ -234,12 +234,33 @@ chat_container = st.container(height=500, border=True)
 with chat_container:
     for message in st.session_state.messages:
         with st.chat_message(message["role"]):
-            st.markdown(message["content"])
+            if message["role"] == "user":
+                col1, col2 = st.columns([0.9, 0.1]) # Adjust ratios as needed
+                with col1:
+                    st.markdown(message["content"])
+                with col2:
+                    if "rag_docs" in message and message["rag_docs"]:
+                        with st.popover("📚"):
+                            st.markdown("#### 参照した知識")
+                            for doc in message["rag_docs"]:
+                                st.markdown(f"- **ソース:** {doc.metadata.get('source', '不明')}")
+                                st.markdown(f"  **内容:** {doc.page_content[:200]}...") # Display first 200 chars
+            else: # Assistant messages
+                st.markdown(message["content"])
 
 # ユーザー入力の処理
 # st.chat_inputは入力フォームと送信ボタンを兼ねる
 if prompt := st.chat_input(""):
-    st.session_state.messages.append({"role": "user", "content": prompt})
+    # RAG検索を先に行い、docsをセッションに保存
+    docs = []
+    if st.session_state.vector_store:
+        docs = st.session_state.vector_store.similarity_search(prompt, k=1)
+    if not docs:
+        st.warning("関連する知識が見つかりませんでした。RAGは機能していません。") # Debugging
+
+    st.session_state.messages.append({"role": "user", "content": prompt, "rag_docs": docs})
+    # Debugging: Print rag_docs to verify content
+    st.write(f"Debug: RAG Docs for current message: {docs}")
     with chat_container: # 新しいメッセージをチャットコンテナに表示
         with st.chat_message("user"):
             st.markdown(prompt)
@@ -248,13 +269,6 @@ if prompt := st.chat_input(""):
         with st.chat_message("assistant"):
             with st.spinner("えりかが考えています..."):
                 try:
-                    # RAG検索
-                    docs = []
-                    if st.session_state.vector_store:
-                        docs = st.session_state.vector_store.similarity_search(prompt)
-                    if not docs:
-                        st.warning("関連する知識が見つかりませんでした。RAGは機能していません。") # Debugging
-
                     # 会話チェーンの取得
                     chain = get_conversational_chain()
 

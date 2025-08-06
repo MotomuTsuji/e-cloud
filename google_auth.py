@@ -10,10 +10,28 @@ from google.auth.transport.requests import Request
 CLIENT_SECRETS_FILE = "client_secrets.json" # 一時ファイルとして作成
 SCOPES = ["https://www.googleapis.com/auth/userinfo.email", "https://www.googleapis.com/auth/userinfo.profile", "openid"]
 
+def get_redirect_uri():
+    """
+    環境に応じてリダイレクトURIを返します。
+    st.secretsに "GOOGLE_CLIENT_ID" が存在するかどうかで、
+    Streamlit Cloud上（またはsecretsが設定された環境）かどうかを判定します。
+    """
+    # Streamlit Cloud上では、st.secretsに設定されたクライアントIDが存在するはず
+    if "GOOGLE_CLIENT_ID" in st.secrets:
+        return "https://e-cloud.streamlit.app"
+    else:
+        # ローカル環境では、固定のURLを使用
+        return "http://localhost:8501"
+
 def create_client_secrets_file():
     """Streamlit secretsからクライアントIDとシークレットを読み込み、一時ファイルを作成する"""
     client_id = st.secrets["GOOGLE_CLIENT_ID"]
     client_secret = st.secrets["GOOGLE_CLIENT_SECRET"]
+
+    # Google Cloud Consoleに登録するリダイレクトURIとJS生成元
+    # このリストは参考情報であり、実際の認証フローではget_redirect_uri()の値が使われます。
+    redirect_uris = ["http://localhost:8501", "https://e-cloud.streamlit.app"]
+    javascript_origins = ["http://localhost:8501", "https://e-cloud.streamlit.app"]
 
     client_secrets_data = {
         "web": {
@@ -23,8 +41,8 @@ def create_client_secrets_file():
             "token_uri": "https://oauth2.googleapis.com/token",
             "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
             "client_secret": client_secret,
-            "redirect_uris": ["http://localhost:8501", "https://your-app-name.streamlit.app"], # デプロイ後のURLも追加
-            "javascript_origins": ["http://localhost:8501", "https://your-app-name.streamlit.app"] # デプロイ後のURLも追加
+            "redirect_uris": redirect_uris,
+            "javascript_origins": javascript_origins
         }
     }
     with open(CLIENT_SECRETS_FILE, "w") as f:
@@ -35,10 +53,13 @@ def get_flow():
     if not os.path.exists(CLIENT_SECRETS_FILE):
         create_client_secrets_file()
 
+    # 現在の環境に応じたリダイレクトURIを取得
+    redirect_uri = get_redirect_uri()
+
     flow = Flow.from_client_secrets_file(
         CLIENT_SECRETS_FILE,
         scopes=SCOPES,
-        redirect_uri=st.secrets.get("REDIRECT_URI", "http://localhost:8501") # Streamlit Cloudでは自動で設定される
+        redirect_uri=redirect_uri
     )
     return flow
 

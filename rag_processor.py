@@ -36,7 +36,7 @@ def load_documents_from_drive(folder_id):
     try:
         # フォルダ内のファイルをリストアップ
         results = service.files().list(
-            q=f"'{folder_id}' in parents and (mimeType='application/pdf' or mimeType='text/plain')",
+            q=f"'{folder_id}' in parents and (mimeType='application/pdf' or mimeType='text/plain' or mimeType='application/json')",
             fields="files(id, name, mimeType)"
         ).execute()
         items = results.get('files', [])
@@ -65,9 +65,17 @@ def load_documents_from_drive(folder_id):
                     for page in reader.pages:
                         text_content += page.extract_text() or ""
                 except Exception as e:
+                    print(f"PDFファイル {file_name} の読み込み中にエラーが発生しました: {e}")
                     continue
             elif mime_type == 'text/plain':
                 text_content = fh.read().decode('utf-8')
+            elif mime_type == 'application/json':
+                try:
+                    json_data = json.load(fh)
+                    text_content = json.dumps(json_data, indent=2, ensure_ascii=False) # Pretty print JSON
+                except Exception as e:
+                    print(f"JSONファイル {file_name} の読み込み中にエラーが発生しました: {e}")
+                    continue
             
             if text_content:
                 documents.append(text_content)
@@ -79,8 +87,8 @@ def load_documents_from_drive(folder_id):
 def get_text_chunks(text):
     """テキストをチャンクに分割する"""
     text_splitter = RecursiveCharacterTextSplitter(
-        chunk_size=10000,
-        chunk_overlap=1000
+        chunk_size=500,
+        chunk_overlap=50
     )
     chunks = text_splitter.split_text(text)
     return chunks
