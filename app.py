@@ -189,28 +189,24 @@ if not st.session_state.logged_in:
     # ログインしていない場合のUI
     st.markdown("<h1 style='text-align: center; color: #8B008B;'>e-cloud</h1>", unsafe_allow_html=True)
 
-    # ログインボックス
+    # ログインボックス用のURLを取得
     login_url = st.session_state.get("auth_url")
     if not login_url:
         login() # auth_urlを生成
         st.rerun() # 再度実行してauth_urlを取得
 
-    # ログインボタンのHTMLを生成 (target=_topでiframeを抜ける)
-    login_link_html = f'''<a href="{login_url}" target="_top" style="
-        background-color: #CCCCCC; color: #333333; border-radius: 20px; 
-        padding: 10px 20px; border: none; font-weight: bold; 
-        text-decoration: none; display: inline-block; 
-        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);">Googleでログイン</a>'''
-
-    login_box_html = f'''
+    # ログインボックスのタイトル
+    st.markdown("""
     <div class='login-box'>
         <h1 style='text-align: center; color: #333333;'>ログイン</h1>
-        <div style='text-align: center; margin-top: 20px;'>
-            {login_link_html}
-        </div>
     </div>
-    '''
-    st.markdown(login_box_html, unsafe_allow_html=True)
+    """, unsafe_allow_html=True)
+
+    # st.link_buttonを中央に配置して表示
+    col1, col2, col3 = st.columns([1, 1, 1])
+    with col2:
+        st.link_button("Googleでログイン", login_url, use_container_width=True)
+
     st.stop() # ログインしていない場合はここで処理を停止
 
 # ログイン済みの場合のUI
