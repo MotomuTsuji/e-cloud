@@ -22,6 +22,11 @@ st.set_page_config(page_title="e-cloud", page_icon="🌸", layout="centered")
 # --- Custom CSS for theming --- #
 st.markdown(r'''
 <style>
+    /* Streamlitの標準ヘッダーを非表示にする */
+    [data-testid="stHeader"] {
+        display: none !important;
+    }
+
     /* General body styling */
     body {
         background-color: #FFF0F5; /* Lavender Blush - light pink */
